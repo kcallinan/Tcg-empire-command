@@ -1,0 +1,12 @@
+{
+  "format": "tcg-empire-gameplay-sync",
+  "version": 1,
+  "syncId": "sync-day197-replace-with-unique-id",
+  "gameDay": 197,
+  "sourceThread": "Thread 3 — Live Gameplay Command",
+  "previousSyncCheckpoint": "day-196-full-backup",
+  "nextSyncCheckpoint": "day-197-replace-with-final-checkpoint",
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "template": true,
+  "events": []
+}
