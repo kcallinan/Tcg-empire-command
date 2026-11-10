@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kcallinan.github.io/Tcg-empire-command/schemas/gameplay-sync-v1.schema.json",
+  "title": "TCG Empire Command Gameplay Sync v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "syncId", "gameDay", "sourceThread", "previousSyncCheckpoint", "nextSyncCheckpoint", "createdAt", "template", "events"],
+  "properties": {
+    "format": { "const": "tcg-empire-gameplay-sync" },
+    "version": { "const": 1 },
+    "syncId": { "$ref": "#/$defs/id" },
+    "gameDay": { "type": "integer", "minimum": 1 },
+    "sourceThread": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "previousSyncCheckpoint": { "$ref": "#/$defs/checkpoint" },
+    "nextSyncCheckpoint": { "$ref": "#/$defs/checkpoint" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "template": { "type": "boolean" },
+    "events": { "type": "array", "maxItems": 500, "items": { "$ref": "#/$defs/event" } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "template": { "const": false } }, "required": ["template"] },
+      "then": { "properties": { "events": { "minItems": 1 } } }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$" },
+    "checkpoint": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$" },
+    "jsonValue": {
+      "oneOf": [
+        { "type": ["string", "number", "boolean", "null"] },
+        { "type": "array", "maxItems": 500, "items": {} },
+        { "type": "object" }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "confidence", "source"],
+      "properties": {
+        "status": { "enum": ["verified", "provisional", "disputed", "unverified"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "source": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reference": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "eventType", "operation", "recordId", "baseRevision", "changes", "evidence"],
+      "properties": {
+        "eventId": { "$ref": "#/$defs/id" },
+        "eventType": { "enum": ["inventory", "acquisition", "trade", "grading", "premium_listing", "premium_sale", "tournament", "shop_profile", "eod_report", "ghost_collection", "card_opening_machine", "pack_operation"] },
+        "operation": { "enum": ["create", "update", "supersede"] },
+        "recordId": { "$ref": "#/$defs/id" },
+        "baseRevision": { "type": ["integer", "null"], "minimum": 0 },
+        "changes": { "type": "object" },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "supersedesEventId": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$" }
+      },
+      "allOf": [
+        { "if": { "properties": { "operation": { "const": "create" } } }, "then": { "properties": { "baseRevision": { "type": "null" } } }, "else": { "properties": { "baseRevision": { "type": "integer", "minimum": 0 } } } },
+        { "if": { "properties": { "operation": { "const": "supersede" } } }, "then": { "required": ["supersedesEventId"], "properties": { "supersedesEventId": { "$ref": "#/$defs/id" } } } },
+        { "if": { "properties": { "eventType": { "const": "shop_profile" } } }, "then": { "properties": { "recordId": { "const": "profile" }, "changes": { "$ref": "#/$defs/shopProfileChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "inventory" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/inventoryChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "acquisition" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/acquisitionChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "trade" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/tradeChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "grading" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/gradingChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "premium_listing" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/premiumListingChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "premium_sale" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/premiumSaleChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "tournament" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/tournamentChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "eod_report" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/eodChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "ghost_collection" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/ghostChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "card_opening_machine" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/machineChanges" } } } },
+        { "if": { "properties": { "eventType": { "const": "pack_operation" } } }, "then": { "properties": { "changes": { "$ref": "#/$defs/packChanges" } } } }
+      ]
+    },
+    "inventoryChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "card": {}, "set": {}, "finish": {}, "grade": {}, "cost": {}, "marketValue": {}, "listPrice": {}, "status": {}, "notes": {}, "quantity": {}, "location": {}, "acquiredDay": {}, "soldDay": {} } },
+    "acquisitionChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "day": {}, "kind": {}, "card": {}, "set": {}, "finish": {}, "quantity": {}, "totalCost": {}, "counterparty": {}, "notes": {} } },
+    "tradeChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "day": {}, "direction": {}, "itemsGiven": {}, "itemsReceived": {}, "cashDelta": {}, "counterparty": {}, "notes": {} } },
+    "gradingChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "batchId": {}, "batchName": {}, "company": {}, "tracking": {}, "card": {}, "set": {}, "finish": {}, "submittedDay": {}, "dueDay": {}, "cost": {}, "g10Value": {}, "priority": {}, "status": {}, "gradeReceived": {}, "returnedDay": {}, "resultDay": {}, "certNumber": {}, "notes": {} } },
+    "premiumListingChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "inventoryId": {}, "listedDay": {}, "platform": {}, "listPrice": {}, "status": {}, "notes": {} } },
+    "premiumSaleChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "inventoryId": {}, "soldDay": {}, "platform": {}, "salePrice": {}, "fees": {}, "buyer": {}, "notes": {} } },
+    "tournamentChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "name": {}, "startDay": {}, "eventDay": {}, "entryFee": {}, "prizePool": {}, "registered": {}, "capacity": {}, "status": {}, "notes": {} } },
+    "shopProfileChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "shopName": {}, "currentDay": {}, "shopLevel": {}, "shopA": {}, "shopB": {}, "tables": {}, "review": {}, "cash": {} } },
+    "eodChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "day": {}, "visits": {}, "checkouts": {}, "dissatisfied": {}, "revenue": {}, "supplyCost": {}, "upgradeCost": {}, "profit": {}, "itemEarning": {}, "cardEarning": {}, "gameEarning": {}, "employeeCost": {}, "rentBills": {}, "itemsSold": {}, "cardsSold": {}, "playHours": {}, "notes": {} } },
+    "ghostChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "card": {}, "set": {}, "finish": {}, "grade": {}, "quantity": {}, "estimatedValue": {}, "status": {}, "notes": {} } },
+    "machineChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "day": {}, "machineId": {}, "machineName": {}, "status": {}, "cost": {}, "slots": {}, "notes": {} } },
+    "packChanges": { "type": "object", "minProperties": 1, "additionalProperties": false, "properties": { "day": {}, "machineId": {}, "setName": {}, "packType": {}, "packsLoaded": {}, "packsOpened": {}, "revenue": {}, "cost": {}, "notes": {} } }
+  }
+}
